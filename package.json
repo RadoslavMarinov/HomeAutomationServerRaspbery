@@ -1,0 +1,19 @@
+{
+  "name": "home-automation-server",
+  "version": "1.0.0",
+  "description": "Server controls home appliancies and monitor home conditions",
+  "main": "main.js",
+  "dependencies": {
+    "socket.io-client": "^2.1.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Home",
+    "Automation"
+  ],
+  "author": "Radoslav Marinov",
+  "license": "ISC"
+}
