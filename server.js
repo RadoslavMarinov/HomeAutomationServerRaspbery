@@ -1,27 +1,20 @@
-const express = require('express');
-
-// const app = express();
-// var http = require('http').Server(app);
-
+const express = require("express");
+var uart = require("./modules/uart");
+var uartParser = require("./modules/uart-parser");
+/* SOCKET IO Stuff *********************************************/
 const port = 3333;
-const socktServerUrl = 'https://riko-express-react-learning.herokuapp.com/';
+const socktServerUrl = "https://riko-express-react-learning.herokuapp.com/";
+var socket = require("socket.io-client")(socktServerUrl);
 
-var socket = require('socket.io-client')(socktServerUrl);
-
-console.log("Hello Riko");
-
-socket.on('connect', function() {
-    console.log("SocketIO client connected!");
-    socket.emit("I am", "Home server");
+socket.on("connect", function() {
+  console.log("SocketIO client connected!");
+  socket.emit("I am", "Home server");
 });
-socket.on('button', function(data) {
-    console.log(data)
+socket.on("button", function(data) {
+  console.log(data);
 });
-socket.on('disconnect', function() {
-    console.log("SocketIO client disconected!")
+socket.on("disconnect", function() {
+  console.log("SocketIO client disconected!");
 });
 
-// app.get('/', (req, res) => res.send('Hello World!'))
-// http.listen(port, function() {
-//     console.log('Listening on port', port);
-// });
+/* COMPORT User Listeners */
