@@ -1,5 +1,5 @@
 const express = require("express");
-var uart = require("./modules/uart");
+var communicator = require("./modules/communicator");
 var uartParser = require("./modules/uart-parser");
 /* SOCKET IO Stuff *********************************************/
 const port = 3333;
@@ -16,5 +16,3 @@ socket.on("button", function(data) {
 socket.on("disconnect", function() {
   console.log("SocketIO client disconected!");
 });
-
-/* COMPORT User Listeners */
