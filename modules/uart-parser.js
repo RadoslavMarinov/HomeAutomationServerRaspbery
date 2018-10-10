@@ -11,7 +11,7 @@ serialPort.on("data", function(data) {
   // console.log(data);
   try {
     parser.analyse(data, function(response) {
-      console.log("Response is: " + response);
+      // console.log("Response is: " + response);
     });
   } catch (error) {
     console.log(colors.red(error));
@@ -21,62 +21,49 @@ serialPort.on("data", function(data) {
 function Parser() {
   this.receiveBuffer = Buffer.alloc(0);
 
+  this.message = [];
+
+  this.cb = function(data) {};
   /* GET_FRAME() ******************************** */
   this.analyse = function(data) {
     // *
-    for (let index = 0; index < data.length; index++) {
-      let current = data[index];
-      let next = data[index + 1];
-      // -
-      if (current !== 0x0d && current !== 0x0a) {
+
+    var dataLength = data.length,
+      index = 0;
+
+    while (index < dataLength) {
+      while (
+        index < dataLength &&
+        data[index] !== 0x0d &&
+        data[index] !== 0x0a
+      ) {
         this.receiveBuffer = Buffer.concat([
           this.receiveBuffer,
-          Buffer.from([current])
+          Buffer.from([data[index]])
         ]);
-        if (index === data.length - 1) {
-          console.log("Buffer is long: " + this.receiveBuffer.length);
-        }
-      } //
-      else {
-        if (next !== 0x0a && next !== 0x0d) {
-          console.log(
-            colors.red(
-              "ERROR: Invalid sequence: 0x0D must be followed by 0x0A!"
-            )
-          );
-          return;
-        }
-        let symbol = index;
-        while (data[symbol] !== 0x0a) {
-          if (data[symbol] !== 0x0d) {
-            console.log(
-              colors.red(
-                "Invalid ending sequence: after 0x0d must follow 0x0d or 0x0a"
-              )
-            );
-          }
-          symbol++;
-        }
-        if (symbol >= data.length) {
-          console.log(colors.red("Parser exceedes buffer bouderies"));
-          throw new Error("000").lineNumber;
-        }
-        index = symbol;
-        console.log(
-          colors.cyan(
-            "index = " + index,
-            "Data length = " + data.length,
-            "Target char = " + "0x" + data[index].toString(16).toUpperCase(),
-            "Receive buff: " +
-              (this.receiveBuffer.length > 0 ? this.receiveBuffer : "EMPTY")
-          )
-        );
-        var frameBuff = Buffer.from(this.receiveBuffer);
-        this.receiveBuffer = Buffer.alloc(0);
-        this.parse(frameBuff);
+
+        index++;
       }
-      // -
+
+      // --
+      if (index === dataLength) {
+        return;
+      }
+      var frameBuff = Buffer.from(this.receiveBuffer);
+      this.receiveBuffer = Buffer.alloc(0);
+      // console.log("Frame Buff: ", frameBuff);
+      this.parse(frameBuff);
+
+      // this.cb(frameBuff);
+
+      while (
+        (index < dataLength && data[index] === 0x0d) ||
+        data[index] === 0x0a
+      ) {
+        index++;
+      }
     }
+    // -
   };
   /* PARSE() ******************************** */
   this.parse = function(frame) {
@@ -87,7 +74,10 @@ function Parser() {
       switch (frameStr) {
         case "ready": {
           console.log(colors.blue("@ Target started!"));
-          response = "ready";
+          response = frameStr;
+          this.message.push(frameStr);
+          this.cb(this.message);
+          this.message = [];
           // serialPort.write("ATE0\r\n");
           break;
         }
@@ -97,24 +87,33 @@ function Parser() {
           break;
         }
         case "OK": {
-          response = "OK";
+          response = frameStr;
+          this.message.push(frameStr);
+          console.log(this.message);
+          this.cb(this.message);
+          this.message = [];
           break;
         }
         case "ERROR": {
-          response = "ERROR";
+          response = frameStr;
+          this.message.push(frameStr);
+          this.cb(this.message);
+          this.message = [];
+
           break;
         }
         default: {
-          console.log(frame.toString());
-          console.log(colors.red("! Unrecognized frame"));
-          break;
+          // console.log("Customn");
+          this.message.push(frameStr);
+          // console.log(this.message);
+          return;
         }
       }
       if (response !== undefined) {
-        this.emit("uart parser", { event: response.toLowerCase() });
+        // this.emit("uart parser", { event: response.toLowerCase() });
       }
     } else {
-      console.log("\r\n");
+      // console.log("\r\n");
     }
     // console.log("******* frame delimiter *******".bgCyan);
   };

@@ -65,6 +65,17 @@ function Transmitter(props) {
     this.send("AT+CWDHCP=" + m + "," + enableDisable + commandEnd);
   };
   //   --
+  this.requestConnectedClients = function() {
+    this.send("AT+CWLIF" + commandEnd);
+  };
+  // --
+  this.reqSoftApMac = function() {
+    this.send("AT+CIPAPMAC?" + commandEnd);
+  };
+  // --
+  this.resetTarget = function() {
+    this.send("AT+RST" + commandEnd);
+  };
 }
 
 function transmitter(props) {

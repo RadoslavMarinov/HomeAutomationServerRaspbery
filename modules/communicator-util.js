@@ -1,5 +1,20 @@
 var colors = require("colors/safe");
 var transmitter = require("./uart-transmitter")();
+var clients = require("./clients");
+// var parser = require("./uart-parser");
+
+function Timer() {
+  this.timeoutId = {};
+
+  this.newTimeout = function(cb, t) {
+    try {
+      clearTimeout(this.timeoutId);
+    } catch (error) {}
+    this.timeoutId = setTimeout(function() {
+      cb();
+    }, t);
+  };
+}
 
 function dispatchInit(substate) {
   switch (substate.currentState) {
@@ -35,13 +50,46 @@ function dispatchInit(substate) {
     // --
     case "enable-dhcp": {
       substate.setState("diable-echo");
-      console.log(colors.green("Communicator: Initialization succeded!"));
+
       return "done";
     }
   }
   return "in progress";
 }
+/* ------------------------------------------------------------------------------------- */
+function dispatchRunning(substate, data, onDone) {
+  let state = substate.currentState;
+
+  switch (state) {
+    case "update-client-list": {
+      if (data.event === "OK") {
+        if (onDone) {
+          clients.updateList();
+          onDone();
+        }
+      } else if (data.event === "unknownData") {
+        // console.log(data);
+        // -- Parse station data
+        var stationData = {};
+        var stationString = data.data.toString();
+        var stationStringTokens = stationString.split(",");
+        stationData.ip = stationStringTokens[0];
+        stationData.mac = stationStringTokens[1];
+        // --/
+        // -- Push client to clientBuffer
+        clients.put(stationData);
+
+        // console.log(colors.red(stationData));
+        if (onDone) {
+          onDone(data.data.toString(stationData));
+        }
+      }
+      break;
+    }
+  }
+}
 
 module.exports = {
-  dispatchInit: dispatchInit
+  dispatchInit: dispatchInit,
+  dispatchRunning: dispatchRunning
 };
