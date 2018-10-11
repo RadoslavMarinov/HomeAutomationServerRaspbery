@@ -32,10 +32,10 @@ const print = console.log;
 gEvEmiter.on("uart/port:open", msg => {
   // initEsp();
   uartSender
-    .put("AT+RST" + commandEnd, "ready", 800, true)
+    .put("AT+RST" + commandEnd, "ready", 800, true)()
     .then(msg => {
-      // print("RESTART  then " + msg);
-      return uartSender.put("ATE0" + commandEnd, "OK", 10000, true);
+      print("ready");
+      return uartSender.put("ATE0" + commandEnd, "OK", 100, true)();
     })
     .then(msg => {
       print(msg);

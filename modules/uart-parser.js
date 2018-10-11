@@ -71,15 +71,16 @@ function Parser() {
   };
   /* PARSE() ******************************** */
   this.parse = function(frame) {
-    console.log(this.msgDelim);
+    // console.log(this.msgDelim);
     if (frame.length !== 0) {
       let frameStr = frame.toString("utf-8");
-      console.log(frameStr);
+      // console.log(frameStr);
 
       if (frameStr === this.msgDelim) {
         this.message.push(frameStr);
-        console.log(colors.blue("We have a match ", this.message));
+        // console.log(colors.blue("We have a match ", this.message));
         this.cb(this.message);
+        this.message = [];
       } else {
         this.message.push(frameStr);
       }

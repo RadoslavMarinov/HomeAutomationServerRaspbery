@@ -13,6 +13,7 @@ const uartSem = new Semafor();
 class Queue {
   constructor() {
     this.funcQueue = [];
+
     setInterval(() => {
       this.checkForTask();
     }, 2000);
@@ -25,28 +26,32 @@ class Queue {
   // --
 
   put(message, msgDelim, resTime, releaseUartSem) {
-    var responseTimeout = resTime || 100;
+    var funcQueue = this.funcQueue;
 
-    return new Promise((resolve, reject) => {
-      this.funcQueue.push({
-        func: function() {
-          parser.cb = resolve;
-          parser.msgDelim = msgDelim || "OK";
-          transmitter.send(message);
-          // --
-          setTimeout(() => {
-            reject(
-              "Response timeout expired! Expected response " +
-                '"' +
-                msgDelim +
-                '"' +
-                " did not arrived from ESP"
-            );
-          }, resTime || 1000);
-        },
-        message: message
+    return function() {
+      var responseTimeout = resTime || 100;
+
+      return new Promise((resolve, reject) => {
+        funcQueue.push({
+          func: function() {
+            parser.cb = resolve;
+            parser.msgDelim = msgDelim || "OK";
+            transmitter.send(message);
+            // --
+            setTimeout(() => {
+              reject(
+                "Response timeout expired! Expected response " +
+                  '"' +
+                  msgDelim +
+                  '"' +
+                  " did not arrived from ESP"
+              );
+            }, resTime || 1000);
+          },
+          message: message
+        });
       });
-    });
+    };
   }
 
   //   --
@@ -57,6 +62,7 @@ class Queue {
       // uartSem.take();
       // console.log("SSSSSSSSS", parser.msgDelim);
       this.funcQueue[0].func();
+      console.log(colors.grey("Expected : " + parser.msgDelim));
       this.funcQueue = this.funcQueue.slice(1);
       return true;
     } else if (uartSem.use === false) {
