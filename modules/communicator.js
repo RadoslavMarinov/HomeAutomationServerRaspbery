@@ -7,188 +7,117 @@ var util = require("util");
 var EventEmitter = require("events");
 var clients = require("./clients");
 var uartSender = require("./uart-queue").queue;
+var { uartSemafor } = require("./uart-queue");
+var gEvEmiter = require("./g-event");
 // var util = require("util");
 const commandEnd = "\r\n";
+const print = console.log;
 
-setInterval(() => {
+// setInterval(() => {
+
+// async function initEsp() {
+//   // --
+//   let resetEspOkResp = await uartSender.put("AT+RST" + commandEnd); //Restart ESP
+//   if (resetEspOkResp[resetEspOkResp.length - 1] !== "OK") {
+//     console.log(colors.red("Unexpected  Response upon Reset Command!"));
+//   }
+//   // --
+//   let resetEspReadyResp = await waitEspReady();
+//   if (resetEspReadyResp[resetEspReadyResp.length - 1] !== "ready") {
+//     console.log(colors.red("Unexpected  Response upon Reset Command!"));
+//   }
+//   console.log(colors.blue("Esp Ready! "));
+// }
+
+gEvEmiter.on("uart/port:open", msg => {
+  // initEsp();
   uartSender
-    .put("AT" + commandEnd)
-    .then(function(ms) {
-      console.log("Pro resolveds", ms.toString());
+    .put("AT+RST" + commandEnd, "ready", 800, true)
+    .then(msg => {
+      // print("RESTART  then " + msg);
+      return uartSender.put("ATE0" + commandEnd, "OK", 10000, true);
+    })
+    .then(msg => {
+      print(msg);
     })
     .catch(function(ms) {
-      console.log(ms);
+      console.log(colors.red(ms));
     });
-}, 1000);
-
-/* ********************************************************************************************************************* */
-/* ********************************************************************************************************************* */
-/* ********************************************************************************************************************* */
-/* ********************************************************************************************************************* */
-/* ********************************************************************************************************************* */
-/* ********************************************************************************************************************* */
-/* ********************************************************************************************************************* */
-/* ********************************************************************************************************************* */
-/* ********************************************************************************************************************* */
-/* ********************************************************************************************************************* */
-resolver = function() {};
-
-var states = new StateMachine(["idle", "init", "running"], "idle");
-states.attachSubStateTo(
-  "init",
-  [
-    "diable-echo",
-    "test-com",
-    "set-mode",
-    "confAP",
-    "conf-ap-ip",
-    "enable-dhcp"
-  ],
-  "diable-echo"
-);
-
-states.attachSubStateTo(
-  "running",
-  ["update-client-list", "control"],
-  "update-client-list"
-);
-
-// var  = new StateMachine(["at", "set-mode", "confAP"], "at");
-parser.on("restart", function(data) {
-  let { event } = data;
-  // console.log("ÄSDASDAS");
-  eventDispatcher[event](event);
-});
-
-/*  EVENT Listeners for user Events */
-function uarParserInitListener(data) {
-  let { event } = data;
-  try {
-    eventDispatcher[event](data);
-  } catch (error) {
-    console.log(error);
-  }
-}
-
-parser.on("uart parser", uarParserInitListener);
-
-/* Object that containst all the user-event handlers */
-class EventDispatcher extends EventEmitter {
-  constructor() {
-    super();
-
-    this.unknownData = this.unknownData.bind(this);
-  }
   // --
-  unknownData(data) {
-    // console.log("unknownData", data.data.toString());
-    switch (states.currentState) {
-      case "running": {
-        let emit = this.emit.bind(this);
+  // uartSender
+  //   .put("ATE0" + commandEnd, "OK", 100, true)
+  //   .then(() => {
+  //     // uartSemafor.release();
+  //   })
+  //   .catch(function(ms) {
+  //     // console.log(colors.red(ms));
+  //   });
+  // --
+  // uartSender
+  //   .put("AT+CWMODE=" + 2 + commandEnd, "OK", 100, true)
+  //   .then(() => {
+  //     console.log("TADAA");
+  //   })
+  //   .catch(msg => {
+  //     console.log(msg);
+  //   });
 
-        utils.dispatchRunning(states.substates["running"], data);
-        break;
-      }
-    }
-    // console.log(data.data.toString().split(","));
-  }
-  /* OK */
-  ok() {
-    switch (states.currentState) {
-      /* ------ */
-      case "init": {
-        let substate = states.substates["init"];
-        if (utils.dispatchInit(substate) === "done") {
-          console.log(
-            colors.inverse.green("Communicator: Initialization succeded!")
-          );
-          // parser.off("uart parser", uarParserListener);
-          enterStateRunningSubstate("update-client-list");
-        }
-        break;
-      }
-      case "running": {
-        //This OK event means that the Client List request has been collected and finished
-        let emit = this.emit.bind(this);
-        utils.dispatchRunning(
-          states.substates["running"],
-          { event: "OK", data: null },
-          () => {
-            enterStateRunningSubstate("control");
-          }
-        );
-        break;
-      }
-    } // Swtch End
-  }
-
-  //--
-  /* READY */
-  ready() {
-    restartWifi(states);
-    // transmitter.send("AT\r\n");
-  }
-
-  /* RESTART */
-  restart(event) {
-    restartWifi(states);
-  }
-  /* ERROR */
-  error() {
-    console.log("ESP ERROR");
-  }
-}
-// End of Event Dispatcher
-// --
-var eventDispatcher = new EventDispatcher();
-
-enterStateRunningSubstate = function(substate) {
-  // console.log("Enmter stat Runnubng")
-  states.setState("running").setState(substate);
-  //
-  //
-  switch (substate) {
-    case "update-client-list": {
-      transmitter.requestConnectedClients();
-      // Listener
-      function showData(data) {
-        console.log("Listener", data);
-        if (data === "OK") {
-        }
-        // eventDispatcher.off("uData", showData);
-        // console.log(util.inspect(eventDispatcher.listenerCount("uData")));
-      }
-      break;
-    }
-    case "control": {
-      console.log("Enter Control");
-      eventDispatcher.removeAllListeners("uData");
-
-      setTimeout(function() {
-        enterStateRunningSubstate("update-client-list");
-      }, 1500);
-
-      break;
-    }
-  }
-
-  // utils.dispatchRunning(substate, function() {
-  //   states.substates["running"].setState("control");
-  //   console.log("State = running, control");
-  // });
-};
-
-restartWifi = function(states) {
-  console.log(colors.cyan("RestartVIFI"));
-  state = states.currentState;
-  states.setState("init").setState("diable-echo");
-  transmitter.disableEcho();
-};
-/*   This Function must be at the bottom;
- Issued at the beginning in order to restart the netwokr when 
-server restarts */
-var resetTarget = new Promise((resolve, reject) => {
-  resolver = resolve;
+  // .then(msg => {
+  //   console.log(msg);
+  // }) //Restart ESP
+  // .then(function(ms) {
+  //   console.log("ASDDDDD");
+  //   uartSemafor.release();
+  //   return turnEspEchoOff("OK", 100);
+  // })
+  // .then(() => {
+  //   return turnEspEchoOff();
+  // })
+  // .then(() => {
+  //   uartSemafor.release();
+  //   configEspMode("access point");
+  // })
+  /* Catch Init porcess
+     * exeptions!
+     */
 });
 
-transmitter.resetTarget();
+// --
+function turnEspEchoOff(expRes, resTime, relUartSem) {
+  return uartSender.put("ATE0" + commandEnd, expRes, resTime, relUartSem);
+}
+// --
+function configEspMode(mode, expRes, resTimeout, relUartSem) {
+  switch (mode) {
+    case "station": {
+      return uartSender.put(
+        "AT+CWMODE=" + 1 + commandEnd,
+        expRes,
+        resTimeout,
+        relUartSem
+      );
+    }
+    case "access point": {
+      return uartSender.put(
+        "AT+CWMODE=" + 2 + commandEnd,
+        expRes,
+        resTimeout,
+        relUartSem
+      );
+    }
+    case "access point + station": {
+      return uartSender.put(
+        "AT+CWMODE=" + 3 + commandEnd,
+        expRes,
+        resTimeout,
+        relUartSem
+      );
+    }
+    default: {
+      throw new Error("Invalid argument for 'mode'!");
+    }
+  }
+}
+// }, 2000);
+
+/* ********************************************************************************************************************* */

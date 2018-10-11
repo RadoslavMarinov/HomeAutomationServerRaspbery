@@ -1,4 +1,5 @@
 var SerialPort = require("serialport");
+var gEvEmiter = require("./g-event");
 
 const COM_PORT = "COM19";
 var port = new SerialPort(COM_PORT, {
@@ -11,6 +12,7 @@ port.on("open", function(err) {
     console.log(COM_PORT, " Failed to open!");
   } else {
     console.log(COM_PORT, " opened!");
+    gEvEmiter.emit("uart/port:open", { port: "open" });
   }
 });
 

@@ -1,7 +1,9 @@
 var serialPort = require("./uart").port;
+
+var eventEmiter = require("events");
+var gEmiter = require("./g-event");
 var colors = require("colors/safe");
 var util = require("util");
-var eventEmiter = require("events").EventEmitter;
 
 var parser = new Parser();
 
@@ -22,6 +24,8 @@ function Parser() {
   this.receiveBuffer = Buffer.alloc(0);
 
   this.message = [];
+  this.msgDelim = "";
+  this.releaseUartSem = false;
 
   this.cb = function(data) {};
   /* GET_FRAME() ******************************** */
@@ -67,61 +71,22 @@ function Parser() {
   };
   /* PARSE() ******************************** */
   this.parse = function(frame) {
-    var response = undefined;
+    console.log(this.msgDelim);
     if (frame.length !== 0) {
       let frameStr = frame.toString("utf-8");
-      //--
-      switch (frameStr) {
-        case "ready": {
-          console.log(colors.blue("@ Target started!"));
-          response = frameStr;
-          this.message.push(frameStr);
-          this.cb(this.message);
-          this.message = [];
-          // serialPort.write("ATE0\r\n");
-          break;
-        }
-        //Always Returned ECHO upon command ATE0: "serialPort.write("ATE0\r\n");"
-        case "ATE0": {
-          // console.log("");
-          break;
-        }
-        case "OK": {
-          response = frameStr;
-          this.message.push(frameStr);
-          console.log(this.message);
-          this.cb(this.message);
-          this.message = [];
-          break;
-        }
-        case "ERROR": {
-          response = frameStr;
-          this.message.push(frameStr);
-          this.cb(this.message);
-          this.message = [];
+      console.log(frameStr);
 
-          break;
-        }
-        default: {
-          // console.log("Customn");
-          this.message.push(frameStr);
-          // console.log(this.message);
-          return;
-        }
-      }
-      if (response !== undefined) {
-        // this.emit("uart parser", { event: response.toLowerCase() });
+      if (frameStr === this.msgDelim) {
+        this.message.push(frameStr);
+        console.log(colors.blue("We have a match ", this.message));
+        this.cb(this.message);
+      } else {
+        this.message.push(frameStr);
       }
     } else {
-      // console.log("\r\n");
+      console.log(colors.grey("Parser message with 0 length"));
     }
-    // console.log("******* frame delimiter *******".bgCyan);
   };
-
-  // Parse more complex service frames as responses to querys.
-  function parseComplexServiceFrame(frame) {
-    event = { event: "" };
-  }
 }
 /* ******************************** */
 
