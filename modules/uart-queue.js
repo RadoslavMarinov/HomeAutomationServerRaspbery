@@ -3,7 +3,7 @@ var transmitter = require("./uart-transmitter")();
 var parser = require("./uart-parser");
 var Semafor = require("./semafor");
 
-const uartSem = new Semafor();
+var uartSem = new Semafor();
 
 // setInterval(() => {
 //   console.log(queue.funcQueue);
@@ -16,7 +16,7 @@ class Queue {
 
     setInterval(() => {
       this.checkForTask();
-    }, 2000);
+    }, 2);
     // setInterval(() => {
     //   console.log(uartSem.use);
     //   console.log(this.funcQueue);
@@ -28,44 +28,43 @@ class Queue {
   put(message, msgDelim, resTime, releaseUartSem) {
     var funcQueue = this.funcQueue;
 
-    return function() {
-      var responseTimeout = resTime || 100;
-
-      return new Promise((resolve, reject) => {
-        funcQueue.push({
-          func: function() {
-            parser.cb = resolve;
-            parser.msgDelim = msgDelim || "OK";
-            transmitter.send(message);
-            // --
-            setTimeout(() => {
-              reject(
-                "Response timeout expired! Expected response " +
-                  '"' +
-                  msgDelim +
-                  '"' +
-                  " did not arrived from ESP"
-              );
-            }, resTime || 1000);
-          },
-          message: message
-        });
+    return new Promise((resolve, reject) => {
+      funcQueue.push({
+        func: function() {
+          parser.cb = resolve;
+          parser.msgDelim = msgDelim || "OK";
+          parser.releaseUartSem = releaseUartSem ? uartSem.release : undefined;
+          transmitter.send(message);
+          // --
+          setTimeout(() => {
+            reject(
+              "Response timeout expired! Expected response " +
+                '"' +
+                msgDelim +
+                '"' +
+                " did not arrived from ESP"
+            );
+          }, resTime || 1000);
+          // -- Rejection End
+        },
+        message: message
       });
-    };
+    });
   }
 
   //   --
 
   checkForTask() {
-    if (typeof this.funcQueue[0] !== "undefined" /*  && uartSem.use */) {
+    if (typeof this.funcQueue[0] !== "undefined" && uartSem.isFree()) {
       console.log(colors.grey("Hadle message: " + this.funcQueue[0].message));
-      // uartSem.take();
+      uartSem.take();
       // console.log("SSSSSSSSS", parser.msgDelim);
       this.funcQueue[0].func();
       console.log(colors.grey("Expected : " + parser.msgDelim));
       this.funcQueue = this.funcQueue.slice(1);
       return true;
-    } else if (uartSem.use === false) {
+    } else if (!uartSem.isFree()) {
+      console.log(colors.grey(uartSem.isFree()));
     }
   }
 }

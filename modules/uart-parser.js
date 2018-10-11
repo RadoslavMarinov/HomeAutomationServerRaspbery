@@ -25,7 +25,7 @@ function Parser() {
 
   this.message = [];
   this.msgDelim = "";
-  this.releaseUartSem = false;
+  this.releaseUartSem = undefined;
 
   this.cb = function(data) {};
   /* GET_FRAME() ******************************** */
@@ -80,12 +80,13 @@ function Parser() {
         this.message.push(frameStr);
         // console.log(colors.blue("We have a match ", this.message));
         this.cb(this.message);
+        this.releaseUartSem ? this.releaseUartSem() : null;
         this.message = [];
       } else {
         this.message.push(frameStr);
       }
     } else {
-      console.log(colors.grey("Parser message with 0 length"));
+      // console.log(colors.grey("Parser message with 0 length"));
     }
   };
 }

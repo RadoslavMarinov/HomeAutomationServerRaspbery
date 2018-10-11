@@ -1,4 +1,4 @@
-var colors = require("colors/safe");
+var colors = require("colors");
 var parser = require("./uart-parser");
 const StateMachine = require("./state-machine").StateMachine;
 var transmitter = require("./uart-transmitter")();
@@ -32,17 +32,32 @@ const print = console.log;
 gEvEmiter.on("uart/port:open", msg => {
   // initEsp();
   uartSender
-    .put("AT+RST" + commandEnd, "ready", 800, true)()
+    .put("AT+RST" + commandEnd, "ready", 800, true)
     .then(msg => {
       print("ready");
-      return uartSender.put("ATE0" + commandEnd, "OK", 100, true)();
     })
+    .catch(function(ms) {
+      console.log(colors.red(ms));
+    });
+
+  uartSender
+    .put("ATE0" + commandEnd, "OK", 100, true)
     .then(msg => {
       print(msg);
     })
     .catch(function(ms) {
       console.log(colors.red(ms));
     });
+
+  uartSender
+    .put("AT+CWMODE=" + 2 + commandEnd, "OK", 100, true)
+    .then(msg => {
+      print(msg);
+    })
+    .catch(function(ms) {
+      console.log(colors.red(ms));
+    });
+
   // --
   // uartSender
   //   .put("ATE0" + commandEnd, "OK", 100, true)
